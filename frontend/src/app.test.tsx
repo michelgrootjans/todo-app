@@ -1,9 +1,11 @@
 import {render, screen, waitFor} from "./test-lib/test-utils";
 import App from "./app";
 import {faker} from "@faker-js/faker";
-import {resetTodos} from "./test-lib/test-server";
+import {mswServer, resetTodos} from "./test-lib/test-server";
 import {aTodo} from "./test-lib/todo";
 import {within} from "@testing-library/react";
+import {AddTodoForm} from "./components/add-todo";
+import {rest} from "msw";
 
 test("renders title", async () => {
     render(<App/>);
@@ -45,8 +47,26 @@ test("start off with a single todo item in the list. When the user deletes it, t
         const removeButton = within(list).getByRole('button', {name: /remove/i});
         await user.click(removeButton);
 
-        await waitFor(() => {
-            screen.getByText(/add some todos/i);
-        });
+        await waitFor(() => screen.getByText(/add some todos/i));
     });
 });
+
+test("given the user adds a todo, when the server returns an error, then the error message shows up", async () => {
+    mswServer.use(
+        rest.post('/api/todos', (req, res, ctx) => {
+            return res(ctx.status(500), ctx.json({
+                "code": "description_too_long",
+                "errorMessage": "Description may not be more than 100 characters"
+            }));
+        })
+    );
+
+    const {user} = render(<AddTodoForm/>);
+    const textBox = screen.getByRole('textbox', {name: /description/i});
+    await user.type(textBox, "something{Enter}")
+    await waitFor(() => {
+        screen.getByText('Description may not be more than 100 characters');
+        expect(textBox).toHaveValue('something')
+    });
+});
+
