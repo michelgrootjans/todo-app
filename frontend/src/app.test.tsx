@@ -70,3 +70,17 @@ test("given the user adds a todo, when the server returns an error, then the err
     });
 });
 
+test("when the user adds a todo, a POST call is done to /api/todos with {\"description\":\"...\"} in the body.", async () => {
+    const postCall = jest.fn();
+    mswServer.use(
+        rest.post('/api/todos', async req => postCall(await req.json()))
+    );
+
+    const {user} = render(<AddTodoForm/>);
+    const textBox = screen.getByRole('textbox', {name: /description/i});
+    await user.type(textBox, "something{Enter}")
+    await waitFor(() => {
+        expect(postCall).toHaveBeenCalledWith({description: 'something'})
+    });
+});
+
