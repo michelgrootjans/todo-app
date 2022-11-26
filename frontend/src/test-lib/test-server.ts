@@ -31,5 +31,14 @@ export const mswServer = setupServer(
         const newTodo = { id: faker.datatype.uuid(), description, done: false };
         todos.push(newTodo);
         return response(context.json(newTodo));
+    }),
+
+    rest.delete("/api/todos/:todoId", async (request, response, context) => {
+        const { todoId } = request.params;
+
+        todos = todos.filter(todo => todo.id !== todoId);
+
+        return response(context.status(200), context.json({}));
     })
+
 );
